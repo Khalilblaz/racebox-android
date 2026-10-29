@@ -1,4 +1,4 @@
-# racebox-android
+# RaceBox Pro Android
 # 🏎️ RaceBox Pro – Precision Drag Timer & Live Telemetry
 
 > **Turn your smartphone into a professional-grade drag racing telemetry tool.**
