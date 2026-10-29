@@ -1,0 +1,1037 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>@RaceBox Ambaturace Pro</title>
+    
+    <!-- Google Fonts: Chakra Petch & Rajdhani -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,600;0,700;1,700&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet">
+
+    <!-- Leaflet JS Map -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <!-- Firebase SDK (Compat Version) -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Rajdhani', sans-serif; user-select: none; }
+        
+        body { 
+            background-color: #000000; color: #ffffff; display: flex; 
+            justify-content: center; align-items: center; min-height: 100vh; 
+            overflow: hidden; -webkit-font-smoothing: antialiased;
+        }
+
+        .app-shell {
+            width: 100%; max-width: 480px; height: 100dvh;
+            background-color: #050505; background-size: cover; background-position: center; background-repeat: no-repeat;
+            border-left: 1px solid #1f1f1f; border-right: 1px solid #1f1f1f;
+            position: relative; display: flex; flex-direction: column; overflow: hidden;
+        }
+
+        .app-overlay-layer {
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(5, 5, 5, 0.88); backdrop-filter: blur(2px);
+            z-index: 1; display: flex; flex-direction: column;
+        }
+
+        .digital-font { font-family: 'Chakra Petch', monospace; letter-spacing: -0.5px; }
+        .neon-cyan { color: #00F2FE; text-shadow: 0 0 12px rgba(0, 242, 254, 0.6); }
+        .neon-green { color: #00FF87; text-shadow: 0 0 12px rgba(0, 255, 135, 0.6); }
+        .neon-yellow { color: #FFD000; text-shadow: 0 0 12px rgba(255, 208, 0, 0.6); }
+        .neon-red { color: #FF2A55; text-shadow: 0 0 12px rgba(255, 42, 85, 0.6); }
+
+        @keyframes springPop {
+            0% { opacity: 0; transform: scale(0.82) translateY(-15px); }
+            70% { transform: scale(1.02) translateY(2px); }
+            100% { opacity: 1; transform: scale(1) translateY(0); }
+        }
+
+        @keyframes cardFadeIn {
+            0% { opacity: 0; transform: translateY(12px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes lightPulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.15); }
+            100% { transform: scale(1); }
+        }
+
+        .header { 
+            display: flex; justify-content: space-between; align-items: center; 
+            padding: 12px 16px; border-bottom: 1px solid #1a1a1a; 
+            background: rgba(0, 0, 0, 0.95); z-index: 10;
+        }
+        .header-title { font-weight: 800; font-size: 14px; color: #ffffff; font-family: 'Chakra Petch', sans-serif; letter-spacing: 1px; }
+        
+        .user-badge-container {
+            display: flex; align-items: center; gap: 8px; background: #111111;
+            border: 1px solid #2e2e2e; padding: 4px 10px 4px 4px; border-radius: 20px;
+            cursor: pointer; transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .user-badge-container:active { transform: scale(0.92); }
+        .user-pp-img { width: 22px; height: 22px; border-radius: 50%; object-fit: cover; border: 1px solid #00F2FE; }
+        .user-badge-text { font-size: 11px; color: #ffffff; font-weight: 700; }
+
+        .content { flex: 1; position: relative; overflow: hidden; z-index: 5; }
+        
+        .tab-content { 
+            display: none; flex-direction: column; align-items: center; 
+            padding: 16px; position: absolute; top: 0; left: 0; right: 0; bottom: 68px;
+            opacity: 0; transform: translateY(12px);
+            transition: opacity 0.25s ease, transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            overflow-y: auto;
+        }
+        .tab-content.active { display: flex; opacity: 1; transform: translateY(0); }
+
+        .bottom-nav { 
+            position: absolute; bottom: 0; left: 0; width: 100%; 
+            display: flex; background: rgba(0,0,0,0.95); border-top: 1px solid #1a1a1a; 
+            height: 68px; z-index: 9999; 
+        }
+        .nav-item { 
+            flex: 1; display: flex; align-items: center; justify-content: center; 
+            color: #555555; font-size: 10px; font-weight: 700; cursor: pointer; 
+            flex-direction: column; gap: 3px; position: relative; transition: all 0.25s ease;
+        }
+        .nav-item span:first-child { font-size: 16px; transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .nav-item.active { color: #ffffff; }
+        .nav-item.active span:first-child { transform: translateY(-3px) scale(1.1); }
+        .nav-item::after {
+            content: ''; position: absolute; top: 0; left: 50%; transform: translateX(-50%) scaleX(0);
+            width: 40%; height: 2px; background: #00F2FE; box-shadow: 0 0 10px #00F2FE;
+            transition: transform 0.25s ease;
+        }
+        .nav-item.active::after { transform: translateX(-50%) scaleX(1); }
+
+        .speed-val { font-size: 88px; font-weight: 700; line-height: 0.95; margin-top: 8px; font-style: italic; }
+        .speed-unit { font-size: 12px; letter-spacing: 3px; margin-bottom: 12px; color: #666; font-weight: 700; }
+        
+        .card-box { 
+            background: rgba(13, 13, 13, 0.9); border: 1px solid #1f1f1f; 
+            padding: 12px; border-radius: 10px; width: 100%; text-align: center; margin-top: 10px; 
+            animation: cardFadeIn 0.35s ease forwards;
+        }
+
+        .timer-val { font-size: 72px; font-weight: 700; margin-top: 4px; line-height: 1; font-style: italic; }
+
+        .progress-container { width: 100%; background: #111; height: 6px; border-radius: 3px; overflow: hidden; margin-top: 8px; border: 1px solid #222; }
+        .progress-bar { height: 100%; width: 0%; background: linear-gradient(90deg, #00F2FE, #00FF87); transition: width 0.15s linear; }
+
+        .tree-container { display: flex; gap: 16px; margin: 12px 0; }
+        .tree-light { width: 24px; height: 24px; border-radius: 50%; background: #111; border: 2px solid #222; transition: all 0.2s ease; }
+        .tree-light.red.active { background: #FF2A55; box-shadow: 0 0 18px #FF2A55; animation: lightPulse 0.4s ease infinite; }
+        .tree-light.yellow.active { background: #FFD000; box-shadow: 0 0 18px #FFD000; animation: lightPulse 0.4s ease infinite; }
+        .tree-light.green.active { background: #00FF87; box-shadow: 0 0 18px #00FF87; animation: lightPulse 0.4s ease infinite; }
+
+        .presets-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; width: 100%; margin-top: 6px; }
+        .btn-preset { 
+            background: rgba(13, 13, 13, 0.9); border: 1px solid #1f1f1f; color: #777; 
+            padding: 10px 4px; border-radius: 8px; font-size: 11px; font-weight: 700; 
+            cursor: pointer; font-family: 'Chakra Petch', sans-serif; 
+            transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .btn-preset.active { 
+            border-color: #00F2FE; color: #00F2FE; background: #1a1a1a; 
+            box-shadow: 0 0 14px rgba(0, 242, 254, 0.35); transform: translateY(-2px); 
+        }
+
+        .controls { width: 100%; background: rgba(13, 13, 13, 0.9); padding: 12px; border-radius: 10px; border: 1px solid #1f1f1f; margin-top: 10px; }
+        .switch-container { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #888; font-weight: 700; }
+        
+        .btn-main { 
+            width: 100%; padding: 14px; font-size: 14px; font-weight: 800; border: none; border-radius: 8px; 
+            background: #ffffff; color: #000; letter-spacing: 1.5px; margin-top: 10px; font-family: 'Chakra Petch', sans-serif; cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .btn-main:active { transform: scale(0.95); }
+
+        #map { height: 100%; width: 100%; position: absolute; top: 0; left: 0; }
+        .map-overlay { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); z-index: 1000; background: rgba(5,5,5,0.95); padding: 10px; border-radius: 8px; border: 1px solid #222; text-align: center; width: 90%; }
+
+        .history-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12px; }
+        .history-table th { background: #0d0d0d; padding: 8px; text-align: left; color: #888; border-bottom: 1px solid #1f1f1f; }
+        .history-table td { padding: 8px; border-bottom: 1px solid #111; color: #fff; font-family: 'Chakra Petch', sans-serif; }
+
+        .setting-group { width: 100%; text-align: left; margin-top: 10px; background: rgba(13, 13, 13, 0.9); padding: 12px; border-radius: 10px; border: 1px solid #1f1f1f; }
+        .setting-label { font-size: 11px; font-weight: 800; color: #777; margin-bottom: 4px; display: block; letter-spacing: 1px; }
+        .setting-input { width: 100%; padding: 8px 10px; background: #000; border: 1px solid #262626; color: #fff; border-radius: 6px; font-size: 12px; outline: none; }
+        .setting-btn { padding: 8px 12px; background: #fff; color: #000; border: none; border-radius: 6px; font-weight: 800; font-size: 11px; cursor: pointer; margin-top: 6px; font-family: 'Chakra Petch', sans-serif; }
+
+        .modal-overlay, .blur-overlay { 
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; 
+            background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+            z-index: 99999; display: none; justify-content: center; align-items: center; padding: 20px; 
+        }
+
+        .modal-box, .auth-card { 
+            background: #0a0e17; border: 1px solid rgba(0, 242, 254, 0.3); width: 100%; max-width: 340px; 
+            padding: 22px; border-radius: 16px; text-align: center; box-shadow: 0 0 35px rgba(0, 0, 0, 0.9); 
+            animation: springPop 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+
+        .toast {
+            position: fixed; top: -70px; left: 50%; transform: translateX(-50%);
+            background: #00FF87; color: #000000; font-weight: 900; padding: 12px 24px;
+            border-radius: 30px; z-index: 1000000; transition: top 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 0 25px rgba(0, 255, 135, 0.5); font-size: 12px; letter-spacing: 1px;
+            display: flex; align-items: center; gap: 8px; pointer-events: none;
+            font-family: 'Chakra Petch', sans-serif;
+        }
+        .toast.show { top: 20px; }
+    </style>
+</head>
+<body>
+
+<div id="toastNotif" class="toast">
+    <span>✓</span> <span id="toastMsg">ACTION SUCCESSFUL</span>
+</div>
+
+<!-- MODAL LIVE SPECTATOR TELEMETRY (PANTAU TEMAN) -->
+<div id="liveSpectateModal" class="blur-overlay">
+    <div class="modal-box" style="max-width: 360px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <span class="digital-font neon-red" style="font-size: 12px; font-weight: 800;">🔴 LIVE SPECTATOR STREAM</span>
+            <span id="spectateStatusTag" class="digital-font neon-yellow" style="font-size: 10px; padding:2px 6px; background:#222; border-radius:4px;">CONNECTING</span>
+        </div>
+        <h2 id="spectateRacerName" class="digital-font neon-cyan" style="font-size: 18px; margin-bottom: 8px;">RACER_TEMAN</h2>
+        
+        <div class="card-box" style="margin-top:0;">
+            <div style="font-size:10px; color:#777; font-weight:bold;">KECEPATAN REAL-TIME</div>
+            <div id="spectateSpeedDisplay" class="digital-font neon-cyan" style="font-size: 54px; font-weight: 700; line-height:1;">0</div>
+            <div style="font-size:10px; color:#555; font-weight:bold;" id="spectateUnitDisplay">KM/H</div>
+        </div>
+
+        <div class="card-box">
+            <div style="display:flex; justify-content:space-between; font-size:11px; color:#888;">
+                <span>WAKTU RUN:</span>
+                <span id="spectateTimerDisplay" class="digital-font neon-yellow" style="font-size:16px; font-weight:bold;">0.00s</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; font-size:11px; color:#888; margin-top:4px;">
+                <span>JARAK TEMPUH:</span>
+                <span id="spectateDistDisplay" class="digital-font neon-green" style="font-size:14px; font-weight:bold;">0.0 / 0 m</span>
+            </div>
+            <div class="progress-container"><div class="progress-bar" id="spectateProgressBar"></div></div>
+        </div>
+
+        <button class="setting-btn" style="width: 100%; background: #FF2A55; color: #fff; margin-top: 12px;" onclick="closeSpectateModal()">TUTUP PEMANTAUAN</button>
+    </div>
+</div>
+
+<div id="customDistanceModal" class="blur-overlay">
+    <div class="modal-box">
+        <h3 class="digital-font neon-cyan" style="font-size: 15px; margin-bottom: 4px;">CUSTOM DRAG TARGET</h3>
+        <p style="font-size: 11px; color: #888; margin-bottom: 12px;">Masukkan jarak target balap (Meter):</p>
+        <input type="number" id="customMetersInput" class="setting-input digital-font" placeholder="Misal: 500" style="text-align: center; font-size: 16px;">
+        <div style="display: flex; gap: 8px; margin-top: 14px;">
+            <button class="setting-btn" style="flex: 1; background: #00F2FE; color: #000;" onclick="submitCustomDistance()">PASANG TARGET</button>
+            <button class="setting-btn" style="flex: 1; background: #222; color: #fff;" onclick="closeCustomDistanceModal()">BATAL</button>
+        </div>
+    </div>
+</div>
+
+<div id="presetManagerModal" class="blur-overlay">
+    <div class="modal-box" style="max-width: 360px;">
+        <h3 class="digital-font neon-yellow" style="font-size: 15px; margin-bottom: 8px;">KELOLA PRESET BALAP</h3>
+        <div id="presetListContainer" style="max-height: 160px; overflow-y: auto; text-align: left; margin-bottom: 10px; border: 1px solid #222; padding: 6px; border-radius: 8px;"></div>
+        <div style="border-top: 1px solid #222; padding-top: 8px; text-align: left;">
+            <span class="setting-label">TAMBAH PRESET BARU</span>
+            <div style="display: flex; gap: 6px; margin-top: 4px;">
+                <input type="text" id="newPresetLabel" class="setting-input" placeholder="Label (ex: 500M)" style="flex: 1;">
+                <input type="number" id="newPresetVal" class="setting-input" placeholder="Nilai" style="flex: 1;">
+            </div>
+            <select id="newPresetType" class="setting-input" style="margin-top: 6px;">
+                <option value="dist">Jarak (Meter)</option>
+                <option value="speed">Kecepatan (0-KM/H)</option>
+            </select>
+            <button class="setting-btn" style="width: 100%; background: #00FF87; color: #000; margin-top: 8px;" onclick="addNewPreset()">+ SIMPAN PRESET BARU</button>
+        </div>
+        <button class="setting-btn" style="width: 100%; background: #222; color: #fff; margin-top: 10px;" onclick="closePresetManagerModal()">TUTUP</button>
+    </div>
+</div>
+
+<!-- MODAL AUTH LOGIN (LOGIN ONLY) -->
+<div class="modal-overlay" id="authModal">
+    <div class="auth-card">
+        <h2 class="digital-font neon-cyan" style="margin-bottom: 4px; font-size: 18px;">RACEBOX LOGIN</h2>
+        <p style="font-size: 11px; color: #666; margin-bottom: 14px;">Masukkan akun buatanmu dari website</p>
+        
+        <input type="email" id="authEmail" class="setting-input" placeholder="Email (user@drag.com)" style="margin-bottom: 8px;">
+        <input type="password" id="authPassword" class="setting-input" placeholder="Password" style="margin-bottom: 12px;">
+        
+        <button class="setting-btn" style="width:100%; padding:12px; background:#fff; color:#000;" onclick="loginUser()">LOGIN AKUN</button>
+        
+        <div style="margin-top: 12px; font-size: 11px; color: #777;">
+            Belum punya akun? <br>
+            <b style="color: #00F2FE;">Daftar dulu di khalzywebsite.my.id</b>
+        </div>
+
+        <button class="setting-btn" style="width:100%; padding:8px; background:transparent; color:#555; text-decoration:underline; margin-top:10px;" onclick="loginGuest()">Masuk Sebagai Tamu</button>
+        
+        <div id="authError" style="color: #FF2A55; font-size: 11px; margin-top: 10px; font-weight: bold;"></div>
+    </div>
+</div>
+
+<div class="app-shell" id="appShell">
+  <div class="app-overlay-layer">
+
+    <div class="header">
+        <span class="header-title digital-font">@RACEBOX PRO</span>
+        <div class="user-badge-container" onclick="openProfileTab()">
+            <img id="userPpImg" class="user-pp-img" src="https://via.placeholder.com/150/000000/00F2FE?text=R" alt="PP">
+            <span class="user-badge-text" id="userBadgeText">Racer</span>
+        </div>
+    </div>
+
+    <div class="content">
+        <!-- TAB 1: SPEEDO -->
+        <div id="tab-speed" class="tab-content active">
+            <div class="speed-val neon-cyan digital-font" id="speedText">0</div>
+            <div class="speed-unit" id="unitLabel1">KM/H</div>
+
+            <div class="card-box">
+                <div style="color:#555; font-size: 11px; font-weight: 800;">TOP SPEED</div>
+                <div class="neon-yellow digital-font" style="font-size: 24px; font-weight: 700; margin-top: 2px;" id="topSpeedText">0.0 KM/H</div>
+                <button onclick="resetTopSpeed()" style="margin-top:4px; background:none; border:none; color:#FF2A55; font-size:10px; font-weight:800; cursor:pointer;">[ RESET TOP SPEED ]</button>
+            </div>
+
+            <div class="card-box">
+                <div style="display:flex; justify-content:space-between; font-size:11px; color:#888; font-weight:700;">
+                    <span>KALIBRASI OFFSET GPS</span>
+                    <span id="offsetValText" class="neon-cyan digital-font">+0 KM/H</span>
+                </div>
+                <input type="range" id="offsetSlider" min="-10" max="10" value="0" style="width:100%; margin-top:8px;" oninput="updateOffset(this.value)">
+            </div>
+
+            <div class="card-box">
+                <div style="color:#555; font-size: 11px; font-weight: 800; margin-bottom: 6px;" id="gpsStatus">SENSOR BELUM AKTIF</div>
+                <button onclick="initSystem()" style="padding:12px; background:#fff; color:#000; border:none; border-radius:6px; font-weight:900; width: 100%; font-size: 12px; cursor:pointer;">AKTIFKAN GPS & SENSOR</button>
+            </div>
+        </div>
+
+        <!-- TAB 2: DRAG TIMER -->
+        <div id="tab-drag" class="tab-content">
+            <div class="presets-grid" id="presetsGridContainer"></div>
+
+            <div style="color: #666; font-size: 11px; width:100%; text-align:left; font-weight: 800; margin-top:12px;">
+                TARGET: <span id="targetLabel" class="neon-yellow digital-font">201.0 METER</span>
+            </div>
+            <div style="color: #666; font-size: 11px; width:100%; text-align:left; margin-top:2px; font-weight: 800;">
+                JARAK TEMPUH: <span id="distText" class="neon-cyan digital-font">0.0 / 201.0 m</span>
+            </div>
+            <div class="progress-container"><div class="progress-bar" id="progressBar"></div></div>
+            
+            <div class="tree-container">
+                <div class="tree-light red" id="lightRed"></div>
+                <div class="tree-light yellow" id="lightYellow"></div>
+                <div class="tree-light green" id="lightGreen"></div>
+            </div>
+
+            <div class="timer-val digital-font" id="timerText">0.00</div>
+            <div style="color: #555; font-size: 11px; letter-spacing: 2px; font-weight: 800;">DETIK</div>
+            
+            <div id="statusAlert" style="margin-top: 8px; font-size: 11px; font-weight: 800; color: #666; padding: 10px; background: #0d0d0d; border-radius: 8px; border: 1px solid #1f1f1f; text-align: center; width: 100%;">
+                TEKAN READY UNTUK MULAI
+            </div>
+
+            <div class="controls">
+                <div class="switch-container">
+                    <span>Auto-Start (Hentakan Gas)</span>
+                    <input type="checkbox" id="autoStartToggle" checked style="transform: scale(1.2);">
+                </div>
+                <button class="btn-main" id="mainBtn" onclick="handleMainButton()">READY / START</button>
+            </div>
+        </div>
+
+        <!-- TAB 3: MAPS -->
+        <div id="tab-map" class="tab-content" style="padding: 0;">
+            <div class="map-overlay">
+                <div style="font-size: 12px; font-weight: 900; color: #fff;">SETTING TRACK PETA</div>
+                <div style="font-size: 11px; color: #888; margin-top: 2px;" id="mapHelpText">Klik 1x titik START, Klik 1x lagi titik FINISH</div>
+                <button onclick="resetCustomTrack()" style="margin-top:6px; padding:4px 10px; background:#FF2A55; color:#fff; border:none; border-radius:4px; font-size:10px; font-weight:900;">RESET TRACK PETA</button>
+            </div>
+            <div id="map"></div>
+        </div>
+
+        <!-- TAB 4: HISTORY REKOR & LIVE SPECTATE TEMAN -->
+        <div id="tab-history" class="tab-content">
+            <div style="width: 100%; display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <span style="font-weight: 900; color: #fff; font-size: 14px;">RIWAYAT RUN TERBAIK</span>
+                <button onclick="clearHistory()" style="background:#FF2A55; color:#fff; border:none; padding:4px 8px; border-radius:4px; font-size:10px; font-weight:bold;">HAPUS LOG</button>
+            </div>
+
+            <!-- FITUR PANTAU / INSPEK LIVE DRAG TEMAN -->
+            <div style="width: 100%; display: flex; gap: 6px; margin-bottom: 12px;">
+                <input type="text" id="searchFriendInput" class="setting-input" placeholder="Nama / Email Teman..." style="flex:1;">
+                <button class="setting-btn" style="background:#00F2FE; color:#000; margin-top:0; font-weight:bold;" onclick="searchAndSpectateFriend()">PANTAU LIVE</button>
+            </div>
+
+            <table class="history-table">
+                <thead><tr><th>TARGET</th><th>WAKTU</th><th>TOP SPEED</th></tr></thead>
+                <tbody id="historyBody"><tr><td colspan="3" style="text-align:center; color:#555;">Belum ada catatan run</td></tr></tbody>
+            </table>
+        </div>
+
+        <!-- TAB 5: SETTINGS -->
+        <div id="tab-settings" class="tab-content">
+            <div style="width:100%; font-weight:900; color:#fff; font-size:14px; margin-bottom:4px; text-align:left;">PROFIL & PENGATURAN</div>
+
+            <div class="setting-group">
+                <span class="setting-label">MANAJEMEN PROFIL RACER</span>
+                <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
+                    <img id="profilePpPreview" src="https://via.placeholder.com/150/000000/00F2FE?text=R" style="width:44px; height:44px; border-radius:50%; border:2px solid #00F2FE; object-fit:cover;">
+                    <input type="text" id="profileNameInput" class="setting-input" placeholder="Nama Racer / Nickname" style="flex:1;">
+                </div>
+                <input type="text" id="profilePpInput" class="setting-input" placeholder="Link URL Foto Profil (PP)" style="margin-bottom:6px;">
+                <button class="setting-btn" onclick="saveProfileData()">SIMPAN PROFIL RACER</button>
+            </div>
+
+            <div class="setting-group">
+                <span class="setting-label">INFORMASI KREDENSIAL AKUN LOGIN</span>
+                <div style="margin-bottom:4px;"><span style="font-size:10px; color:#888;">EMAIL AKUN:</span><div id="accountEmailText" style="font-size:12px; font-weight:bold; color:#00F2FE;">Belum Login</div></div>
+                <div style="margin-bottom:6px;">
+                    <span style="font-size:10px; color:#888;">PASSWORD TERKUNCI:</span>
+                    <div style="display:flex; gap:6px; align-items:center;">
+                        <input type="password" id="accountPassDisplay" class="setting-input" value="********" readonly style="flex:1;">
+                        <button class="setting-btn" style="margin-top:0;" onclick="togglePassView()">INTIP</button>
+                    </div>
+                </div>
+                <button class="setting-btn" style="background:#FF2A55; color:#fff;" onclick="logoutAccount()">LOGOUT AKUN</button>
+            </div>
+
+            <div class="setting-group">
+                <span class="setting-label">CUSTOM BACKGROUND (LINK / 9:16)</span>
+                <input type="text" id="bgUrlInput" class="setting-input" placeholder="Paste URL Gambar Wallpaper">
+                <div style="display:flex; gap:6px;">
+                    <button class="setting-btn" onclick="saveCustomBg()">PASANG BG</button>
+                    <button class="setting-btn" style="background:#222; color:#fff;" onclick="resetCustomBg()">RESET BG</button>
+                </div>
+            </div>
+
+            <div class="setting-group">
+                <div class="switch-container">
+                    <span>EFEK SUARA BEEP (LIGHTS)</span>
+                    <input type="checkbox" id="soundToggle" checked onchange="toggleSoundSetting(this.checked)" style="transform: scale(1.2);">
+                </div>
+            </div>
+
+            <div class="setting-group">
+                <span class="setting-label">SATUAN KECEPATAN</span>
+                <select id="unitSelect" class="setting-input" onchange="changeSpeedUnit(this.value)">
+                    <option value="KM/H">KM/H (Kilometer / Jam)</option>
+                    <option value="MPH">MPH (Miles / Hour)</option>
+                </select>
+            </div>
+
+            <div class="setting-group">
+                <button class="setting-btn" style="background:#222; color:#fff; width:100%;" onclick="resetAllData()">RESET LOG LOCAL</button>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="bottom-nav">
+        <div class="nav-item active" onclick="switchTab('speed', this)"><span>⚡</span><span>SPEEDO</span></div>
+        <div class="nav-item" onclick="switchTab('drag', this)"><span>⏱️</span><span>DRAG</span></div>
+        <div class="nav-item" onclick="switchTab('map', this)"><span>🗺️</span><span>MAPS</span></div>
+        <div class="nav-item" onclick="switchTab('history', this)"><span>🏆</span><span>LOG</span></div>
+        <div class="nav-item" onclick="switchTab('settings', this)"><span>⚙️</span><span>SETTING</span></div>
+    </div>
+
+  </div>
+</div>
+
+    <script>
+        var firebaseConfig = {
+            apiKey: "AIzaSyDuQEgk_86c6plQB5BNCHdRGgzHrFxPu3A",
+            authDomain: "drag-timer-8333f.firebaseapp.com",
+            projectId: "drag-timer-8333f",
+            databaseURL: "https://drag-timer-8333f-default-rtdb.asia-southeast1.firebasedatabase.app",
+            storageBucket: "drag-timer-8333f.firebasestorage.app",
+            messagingSenderId: "203591345564",
+            appId: "1:203591345564:web:46dafcc1767a94d835d459",
+            measurementId: "G-8MZTMYNQBE"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        var auth = firebase.auth();
+        var db = firebase.database();
+
+        var currentUser = null;
+        var soundEnabled = true;
+        var currentUnit = "KM/H";
+
+        // GENERATE DEVICE ID UNIK (1 AKUN 1 HP LOCK)
+        var myDeviceId = localStorage.getItem('racebox_device_id');
+        if (!myDeviceId) {
+            myDeviceId = 'DEV-' + Math.random().toString(36).substring(2, 9) + '-' + Date.now();
+            localStorage.setItem('racebox_device_id', myDeviceId);
+        }
+
+        var sessionListenerRef = null;
+        var activeSpectateRef = null;
+
+        var defaultPresets = [
+            { id: 1, type: 'dist', val: 201, label: '201M' },
+            { id: 2, type: 'dist', val: 402, label: '402M' },
+            { id: 3, type: 'dist', val: 18.28, label: '60 FT' },
+            { id: 4, type: 'speed', val: 60, label: '0-60 KM/H' },
+            { id: 5, type: 'speed', val: 100, label: '0-100 KM/H' }
+        ];
+
+        var userPresets = JSON.parse(localStorage.getItem('racebox_custom_presets')) || defaultPresets;
+
+        auth.onAuthStateChanged(function(user) {
+            if (user) {
+                currentUser = user;
+                var displayName = localStorage.getItem('racebox_racer_name') || (user.isAnonymous ? "Tamu_Racer" : (user.email ? user.email.split('@')[0] : "Racer"));
+                var savedPp = localStorage.getItem('racebox_racer_pp') || "https://via.placeholder.com/150/000000/00F2FE?text=" + displayName.charAt(0).toUpperCase();
+
+                document.getElementById('userBadgeText').innerText = displayName;
+                document.getElementById('userPpImg').src = savedPp;
+                document.getElementById('profilePpPreview').src = savedPp;
+                document.getElementById('profileNameInput').value = displayName;
+                document.getElementById('profilePpInput').value = savedPp;
+                document.getElementById('accountEmailText').innerText = user.isAnonymous ? "Akun Tamu (Anonymous)" : user.email;
+
+                document.getElementById('authModal').style.display = 'none';
+                loadHistoryFromFirebase();
+
+                // LOCK 1 AKUN 1 HP VIA FIREBASE
+                if (!user.isAnonymous) {
+                    sessionListenerRef = db.ref('users/' + user.uid + '/activeDeviceId');
+                    sessionListenerRef.set(myDeviceId);
+
+                    sessionListenerRef.on('value', function(snapshot) {
+                        var activeInServer = snapshot.val();
+                        if (activeInServer && activeInServer !== myDeviceId) {
+                            sessionListenerRef.off();
+                            auth.signOut().then(function() {
+                                alert("⚠️ AKUN DI-LOGOUT!\n\nAkun ini baru saja digunakan untuk login di HP/perangkat lain.");
+                                location.reload();
+                            });
+                        }
+                    });
+                }
+            } else {
+                if (sessionListenerRef) sessionListenerRef.off();
+                currentUser = null;
+                document.getElementById('userBadgeText').innerText = "Belum Login";
+                showAuthModal();
+            }
+        });
+
+        function showToast(msg) {
+            var toast = document.getElementById('toastNotif');
+            document.getElementById('toastMsg').innerText = msg;
+            toast.classList.add('show');
+            setTimeout(function() { toast.classList.remove('show'); }, 2800);
+        }
+
+        function showAuthModal() {
+            document.getElementById('authModal').style.display = 'flex';
+        }
+
+        function loginUser() {
+            var email = document.getElementById('authEmail').value;
+            var pass = document.getElementById('authPassword').value;
+            document.getElementById('authError').innerText = "";
+
+            auth.signInWithEmailAndPassword(email, pass).then(function() {
+                localStorage.setItem('racebox_pass_cache', pass);
+                showToast("LOGIN BERHASIL!");
+            }).catch(function(err) {
+                document.getElementById('authError').innerText = err.message;
+            });
+        }
+
+        function loginGuest() {
+            auth.signInAnonymously().then(function() {
+                showToast("LOGGED IN AS GUEST");
+            }).catch(function(err) {
+                document.getElementById('authError').innerText = err.message;
+            });
+        }
+
+        function logoutAccount() {
+            auth.signOut().then(function() { location.reload(); });
+        }
+
+        function openProfileTab() {
+            if(!currentUser) { showAuthModal(); } 
+            else { switchTab('settings', document.querySelectorAll('.nav-item')[4]); }
+        }
+
+        function saveProfileData() {
+            var name = document.getElementById('profileNameInput').value.trim();
+            var ppUrl = document.getElementById('profilePpInput').value.trim();
+            if(name) { localStorage.setItem('racebox_racer_name', name); document.getElementById('userBadgeText').innerText = name; }
+            if(ppUrl) { localStorage.setItem('racebox_racer_pp', ppUrl); document.getElementById('userPpImg').src = ppUrl; document.getElementById('profilePpPreview').src = ppUrl; }
+            showToast("PROFIL DISIMPAN!");
+        }
+
+        function togglePassView() {
+            var input = document.getElementById('accountPassDisplay');
+            var savedPass = localStorage.getItem('racebox_pass_cache');
+            if(input.type === "password") { input.type = "text"; input.value = savedPass ? savedPass : "(Password Tersimpan)"; } 
+            else { input.type = "password"; input.value = "********"; }
+        }
+
+        // --- FITUR LIVE TELEMETRY STREAM (SPECTATOR MODE) ---
+        function broadcastLiveTelemetry(speed, dist, time, runState) {
+            if (!currentUser || currentUser.isAnonymous) return;
+            db.ref('live_telemetry/' + currentUser.uid).set({
+                displayName: localStorage.getItem('racebox_racer_name') || "Racer",
+                status: runState,
+                currentSpeed: speed,
+                currentDist: dist,
+                targetDist: targetValue,
+                elapsedTime: time,
+                lastUpdate: Date.now()
+            });
+        }
+
+        function searchAndSpectateFriend() {
+            var query = document.getElementById('searchFriendInput').value.trim().toLowerCase();
+            if (!query) { showToast("Ketik nama / email teman!"); return; }
+
+            showToast("Mencari sinyal teman...");
+
+            db.ref('users').once('value', function(snapshot) {
+                var foundUid = null; var foundName = "";
+                snapshot.forEach(function(childSnap) {
+                    var val = childSnap.val();
+                    if (val.profile) {
+                        var name = (val.profile.displayName || '').toLowerCase();
+                        var email = (val.profile.email || '').toLowerCase();
+                        if (name === query || email === query) {
+                            foundUid = childSnap.key;
+                            foundName = val.profile.displayName;
+                        }
+                    }
+                });
+
+                if (foundUid) {
+                    startSpectating(foundUid, foundName);
+                } else {
+                    showToast("Sinyal / Akun teman tidak ditemukan!");
+                }
+            });
+        }
+
+        function startSpectating(friendUid, friendName) {
+            if (activeSpectateRef) activeSpectateRef.off();
+            document.getElementById('spectateRacerName').innerText = friendName.toUpperCase();
+            document.getElementById('liveSpectateModal').style.display = 'flex';
+
+            activeSpectateRef = db.ref('live_telemetry/' + friendUid);
+            activeSpectateRef.on('value', function(snapshot) {
+                var data = snapshot.val();
+                if (!data) {
+                    document.getElementById('spectateStatusTag').innerText = "OFFLINE";
+                    return;
+                }
+
+                document.getElementById('spectateStatusTag').innerText = data.status;
+                document.getElementById('spectateSpeedDisplay').innerText = Math.round(data.currentSpeed || 0);
+                document.getElementById('spectateTimerDisplay').innerText = (data.elapsedTime || 0).toFixed(2) + "s";
+                document.getElementById('spectateDistDisplay').innerText = (data.currentDist || 0).toFixed(1) + " / " + (data.targetDist || 0) + " m";
+                
+                var pct = data.targetDist > 0 ? Math.min(((data.currentDist || 0) / data.targetDist) * 100, 100) : 0;
+                document.getElementById('spectateProgressBar').style.width = pct + "%";
+            });
+        }
+
+        function closeSpectateModal() {
+            if (activeSpectateRef) activeSpectateRef.off();
+            document.getElementById('liveSpectateModal').style.display = 'none';
+        }
+
+        function renderPresetsGrid() {
+            var container = document.getElementById('presetsGridContainer');
+            var html = '';
+            for(var i = 0; i < userPresets.length; i++) {
+                var p = userPresets[i];
+                var activeClass = (i === 0) ? ' active' : '';
+                html += '<button class="btn-preset' + activeClass + '" onclick="selectPreset(' + p.id + ', this)">' + p.label + '</button>';
+            }
+            html += '<button class="btn-preset" onclick="openCustomDistanceModal()">CUSTOM M</button>';
+            html += '<button class="btn-preset" style="border-color:#222; color:#00FF87;" onclick="openPresetManagerModal()">+ KELOLA</button>';
+            container.innerHTML = html;
+        }
+
+        function selectPreset(id, btn) {
+            document.querySelectorAll('#presetsGridContainer .btn-preset').forEach(function(b) { b.classList.remove('active'); });
+            btn.classList.add('active');
+            var p = userPresets.find(function(x) { return x.id === id; });
+            if(!p) return;
+            modeType = p.type; targetValue = p.val;
+            if(p.type === 'dist') {
+                document.getElementById('targetLabel').innerText = p.val + " METER";
+                showToast("TARGET: " + p.val + " METER");
+            } else {
+                document.getElementById('targetLabel').innerText = "0-" + p.val + " " + currentUnit;
+                showToast("TARGET: 0-" + p.val + " " + currentUnit);
+            }
+            updateUI();
+        }
+
+        function openCustomDistanceModal() { document.getElementById('customDistanceModal').style.display = 'flex'; }
+        function closeCustomDistanceModal() { document.getElementById('customDistanceModal').style.display = 'none'; }
+        function submitCustomDistance() {
+            var val = document.getElementById('customMetersInput').value;
+            if(val && !isNaN(val) && parseFloat(val) > 0) {
+                var targetM = parseFloat(val);
+                modeType = 'dist'; targetValue = targetM;
+                document.getElementById('targetLabel').innerText = targetM.toFixed(0) + " METER (CUSTOM)";
+                closeCustomDistanceModal();
+                showToast("TARGET CUSTOM: " + targetM.toFixed(0) + "M");
+                updateUI();
+            }
+        }
+
+        function openPresetManagerModal() { renderPresetManagerList(); document.getElementById('presetManagerModal').style.display = 'flex'; }
+        function closePresetManagerModal() { document.getElementById('presetManagerModal').style.display = 'none'; renderPresetsGrid(); }
+
+        function renderPresetManagerList() {
+            var listCont = document.getElementById('presetListContainer');
+            if(userPresets.length === 0) { listCont.innerHTML = '<div style="font-size:11px; color:#666; text-align:center;">Belum ada preset.</div>'; return; }
+            var html = '';
+            for(var i = 0; i < userPresets.length; i++) {
+                var p = userPresets[i];
+                html += '<div style="display:flex; justify-content:space-between; align-items:center; padding:4px; border-bottom:1px solid #1a1a1a;">' +
+                    '<span style="font-weight:bold; font-size:11px; color:#00F2FE;">' + p.label + ' (' + p.val + (p.type==='dist'?'m':' km/h') + ')</span>' +
+                    '<button onclick="deletePreset(' + p.id + ')" style="background:#FF2A55; color:#fff; border:none; padding:2px 6px; border-radius:4px; font-size:9px; font-weight:bold; cursor:pointer;">HAPUS</button>' +
+                    '</div>';
+            }
+            listCont.innerHTML = html;
+        }
+
+        function addNewPreset() {
+            var label = document.getElementById('newPresetLabel').value.trim();
+            var val = parseFloat(document.getElementById('newPresetVal').value);
+            var type = document.getElementById('newPresetType').value;
+            if(!label || isNaN(val)) { alert("Isi label dan nilai preset!"); return; }
+            userPresets.push({ id: Date.now(), type: type, val: val, label: label });
+            localStorage.setItem('racebox_custom_presets', JSON.stringify(userPresets));
+            document.getElementById('newPresetLabel').value = ''; document.getElementById('newPresetVal').value = '';
+            renderPresetManagerList();
+        }
+
+        function deletePreset(id) {
+            userPresets = userPresets.filter(function(p) { return p.id !== id; });
+            localStorage.setItem('racebox_custom_presets', JSON.stringify(userPresets));
+            renderPresetManagerList();
+        }
+
+        function playSound(freq, duration) {
+            if (!soundEnabled) return;
+            try {
+                var ctx = new (window.AudioContext || window.webkitAudioContext)();
+                var osc = ctx.createOscillator(); var gain = ctx.createGain();
+                osc.type = 'sine'; osc.frequency.value = freq; osc.connect(gain); gain.connect(ctx.destination);
+                osc.start(); osc.stop(ctx.currentTime + duration);
+            } catch(e) {}
+        }
+
+        function switchTab(tabName, elm) {
+            document.querySelectorAll('.tab-content').forEach(function(el) { el.classList.remove('active'); });
+            document.querySelectorAll('.nav-item').forEach(function(el) { el.classList.remove('active'); });
+            document.getElementById('tab-' + tabName).classList.add('active');
+            elm.classList.add('active');
+            if(tabName === 'map') { if(!map) initMap(); setTimeout(function() { if(map) map.invalidateSize(); }, 300); } 
+            else if(tabName === 'history') { renderHistory(); }
+        }
+
+        var topSpeed = 0, currentLat = 0, currentLng = 0;
+        var map = null, userMarker = null;
+        var startLat = null, startLng = null;
+        var customStartMarker = null, customFinishMarker = null, customTrackLine = null;
+
+        var state = 'IDLE', highResStartTime = 0, animFrameReq = null, accumulatedDistance = 0;
+        var modeType = 'dist', targetValue = 201.0, speedOffset = 0, lastAccelMagnitude = 0;
+        var smoothedSpeed = 0, alphaFilter = 0.3;
+
+        function updateOffset(val) {
+            speedOffset = parseInt(val);
+            document.getElementById('offsetValText').innerText = (speedOffset >= 0 ? "+" : "") + speedOffset + " " + currentUnit;
+        }
+
+        function resetTopSpeed() { topSpeed = 0; document.getElementById('topSpeedText').innerText = "0.0 " + currentUnit; }
+
+        function initSystem() {
+            if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+                DeviceMotionEvent.requestPermission().then(function(perm) { if (perm === 'granted') startSensors(); }).catch(console.error);
+            } else { startSensors(); }
+        }
+
+        function startSensors() {
+            document.getElementById('gpsStatus').innerText = "MENGIKAT SATELIT GPS...";
+            navigator.geolocation.watchPosition(updateGPS, function(err) {}, { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 });
+            window.addEventListener('devicemotion', handleMotion);
+            initMap();
+        }
+
+        function updateGPS(pos) {
+            currentLat = pos.coords.latitude; currentLng = pos.coords.longitude;
+            var rawSpeedKmh = pos.coords.speed !== null ? pos.coords.speed * 3.6 : 0;
+            var rawSpeed = currentUnit === "MPH" ? rawSpeedKmh * 0.621371 : rawSpeedKmh;
+            
+            smoothedSpeed = (alphaFilter * rawSpeed) + ((1 - alphaFilter) * smoothedSpeed);
+            var displaySpeed = smoothedSpeed < 2.0 ? 0 : Math.max(0, smoothedSpeed + speedOffset);
+
+            document.getElementById('speedText').innerText = Math.round(displaySpeed);
+            if(displaySpeed > topSpeed) { topSpeed = displaySpeed; document.getElementById('topSpeedText').innerText = topSpeed.toFixed(1) + " " + currentUnit; }
+            document.getElementById('gpsStatus').innerText = "GPS TERKUNCI (READY)";
+            document.getElementById('gpsStatus').className = "neon-green";
+
+            if (map) {
+                if(!userMarker) {
+                    userMarker = L.circleMarker([currentLat, currentLng], {color: '#00F2FE', radius: 7, fillColor: '#00F2FE', fillOpacity: 0.8}).addTo(map);
+                    map.setView([currentLat, currentLng], 17);
+                } else { userMarker.setLatLng([currentLat, currentLng]); }
+            }
+
+            // BROADCAST STREAM KE FIREBASE APABILA SEDANG LAUNCHING/RUNNING
+            if (state === 'RUNNING' || state === 'ARMED') {
+                var elapsed = highResStartTime > 0 ? (performance.now() - highResStartTime) / 1000 : 0;
+                broadcastLiveTelemetry(displaySpeed, accumulatedDistance, elapsed, state);
+            }
+
+            if (state === 'ARMED' && displaySpeed > 3.0 && document.getElementById('autoStartToggle').checked) { startRun(); } 
+            else if (state === 'RUNNING') {
+                if (modeType === 'dist') {
+                    var currentDist = calcDistance(startLat, startLng, currentLat, currentLng);
+                    if (displaySpeed > 1.5 || currentDist > accumulatedDistance) { accumulatedDistance = currentDist; }
+                    updateUI();
+                    if (accumulatedDistance >= targetValue) finishRun();
+                } else if (modeType === 'speed') {
+                    if (displaySpeed >= targetValue) finishRun();
+                }
+            }
+        }
+
+        function handleMotion(event) {
+            if (state !== 'ARMED' || !document.getElementById('autoStartToggle').checked) return;
+            var accel = event.acceleration || event.accelerationIncludingGravity;
+            if (!accel) return;
+            var currentMag = Math.sqrt(Math.pow(accel.x||0, 2) + Math.pow(accel.y||0, 2) + Math.pow(accel.z||0, 2));
+            if (lastAccelMagnitude > 0) {
+                if (Math.abs(currentMag - lastAccelMagnitude) > 8.0) { startRun(); }
+            }
+            lastAccelMagnitude = currentMag;
+        }
+
+        function handleMainButton() {
+            if (state === 'IDLE' || state === 'FINISHED') { armSystemSequence(); } 
+            else { stopRun(); }
+        }
+
+        function armSystemSequence() {
+            state = 'ARMED'; accumulatedDistance = 0;
+            document.getElementById('timerText').innerText = "0.00";
+            document.getElementById('timerText').className = "timer-val digital-font";
+            updateUI();
+
+            var lightR = document.getElementById('lightRed');
+            var lightY = document.getElementById('lightYellow');
+            var lightG = document.getElementById('lightGreen');
+
+            lightR.className = "tree-light red active"; playSound(440, 0.15);
+            setTimeout(function() {
+                if(state!=='ARMED') return;
+                lightR.className = "tree-light red"; lightY.className = "tree-light yellow active"; playSound(550, 0.15);
+            }, 800);
+
+            setTimeout(function() {
+                if(state!=='ARMED') return;
+                lightY.className = "tree-light yellow"; lightG.className = "tree-light green active"; playSound(880, 0.3);
+                if (!document.getElementById('autoStartToggle').checked) startRun();
+            }, 1600);
+        }
+
+        function updateTimerLoop() {
+            if (state !== 'RUNNING') return;
+            var now = performance.now();
+            var elapsedSeconds = (now - highResStartTime) / 1000;
+            document.getElementById('timerText').innerText = elapsedSeconds.toFixed(2);
+
+            // LIVE BROADCAST WAKTU & KECEPATAN
+            var currentSpd = parseFloat(document.getElementById('speedText').innerText) || 0;
+            broadcastLiveTelemetry(currentSpd, accumulatedDistance, elapsedSeconds, 'RUNNING');
+
+            animFrameReq = requestAnimationFrame(updateTimerLoop);
+        }
+
+        function startRun() {
+            state = 'RUNNING';
+            startLat = (customStartMarker) ? customStartMarker.getLatLng().lat : currentLat;
+            startLng = (customStartMarker) ? customStartMarker.getLatLng().lng : currentLng;
+            highResStartTime = performance.now();
+            document.getElementById('timerText').className = "timer-val digital-font neon-yellow";
+            animFrameReq = requestAnimationFrame(updateTimerLoop);
+            updateUI();
+        }
+
+        function finishRun() {
+            state = 'FINISHED';
+            cancelAnimationFrame(animFrameReq);
+            var finalTime = parseFloat(document.getElementById('timerText').innerText) || 0;
+            var currentSpd = parseFloat(document.getElementById('speedText').innerText) || 0;
+            broadcastLiveTelemetry(currentSpd, accumulatedDistance, finalTime, 'FINISHED');
+
+            document.getElementById('timerText').className = "timer-val digital-font neon-green";
+            document.getElementById('lightGreen').className = "tree-light green";
+            playSound(1200, 0.4);
+            showToast("FINISH! " + document.getElementById('timerText').innerText + "s");
+            saveToHistory(); updateUI();
+        }
+
+        function stopRun() {
+            state = 'IDLE'; cancelAnimationFrame(animFrameReq);
+            broadcastLiveTelemetry(0, 0, 0, 'IDLE');
+            document.querySelectorAll('.tree-light').forEach(function(l) { l.className = l.className.replace(' active', ''); });
+            updateUI();
+        }
+
+        function updateUI() {
+            var btn = document.getElementById('mainBtn'), alertBox = document.getElementById('statusAlert');
+            if (modeType === 'dist') {
+                document.getElementById('distText').innerText = accumulatedDistance.toFixed(1) + " / " + targetValue.toFixed(1) + " m";
+                document.getElementById('progressBar').style.width = Math.min((accumulatedDistance / targetValue) * 100, 100) + "%";
+            } else {
+                document.getElementById('distText').innerText = "TARGET: 0-" + targetValue + " " + currentUnit;
+                document.getElementById('progressBar').style.width = Math.min((parseInt(document.getElementById('speedText').innerText) / targetValue) * 100, 100) + "%";
+            }
+
+            if (state === 'ARMED') { 
+                btn.innerText = "ARMED (SIAP LAUNCH)"; btn.style.background = "linear-gradient(135deg, #FFD000, #FF9100)"; 
+                alertBox.innerText = "SISTEM ARMED - MENUNGGU GAS!"; alertBox.style.color = "#FFD000"; 
+            } else if (state === 'RUNNING') { 
+                btn.innerText = "STOP RUN"; btn.style.background = "linear-gradient(135deg, #FF2A55, #D50032)"; 
+                alertBox.innerText = "MELAJU DALAM LINTASAN!"; alertBox.style.color = "#FF2A55"; 
+            } else if (state === 'FINISHED') { 
+                btn.innerText = "RESET / READY LAGI"; btn.style.background = "linear-gradient(135deg, #00FF87, #00B956)"; 
+                alertBox.innerText = "FINISH! WAKTU TERSIMPAN"; alertBox.style.color = "#00FF87"; 
+            } else { 
+                btn.innerText = "READY / START"; btn.style.background = "#ffffff"; btn.style.color = "#000"; 
+                alertBox.innerText = "TEKAN READY UNTUK MULAI"; alertBox.style.color = "#666666"; 
+            }
+        }
+
+        function initMap() {
+            if (map !== null) return;
+            map = L.map('map').setView([-6.2, 106.8], 15);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+            map.on('click', function(e) {
+                var helpText = document.getElementById('mapHelpText');
+                if (!customStartMarker) {
+                    customStartMarker = L.marker(e.latlng).addTo(map).bindPopup("START").openPopup();
+                    helpText.innerText = "START tersetting! Klik titik FINISH di peta.";
+                } else if (!customFinishMarker) {
+                    customFinishMarker = L.marker(e.latlng).addTo(map).bindPopup("FINISH").openPopup();
+                    customTrackLine = L.polyline([customStartMarker.getLatLng(), e.latlng], {color: '#FF2A55', weight: 4, dashArray: '6, 6'}).addTo(map);
+                    var dist = calcDistance(customStartMarker.getLatLng().lat, customStartMarker.getLatLng().lng, e.latlng.lat, e.latlng.lng);
+                    modeType = 'dist'; targetValue = dist;
+                    document.getElementById('targetLabel').innerText = dist.toFixed(1) + " METER (MAP)";
+                    updateUI(); showToast("MAP TRACK: " + dist.toFixed(1) + "M"); map.fitBounds(customTrackLine.getBounds());
+                }
+            });
+        }
+
+        function resetCustomTrack() {
+            if(customStartMarker) map.removeLayer(customStartMarker);
+            if(customFinishMarker) map.removeLayer(customFinishMarker);
+            if(customTrackLine) map.removeLayer(customTrackLine);
+            customStartMarker = null; customFinishMarker = null; customTrackLine = null;
+            targetValue = 201.0; document.getElementById('targetLabel').innerText = "201.0 METER"; updateUI();
+            document.getElementById('mapHelpText').innerText = "Klik 1x titik START, Klik 1x lagi titik FINISH";
+        }
+
+        function saveToHistory() {
+            var finalTime = document.getElementById('timerText').innerText;
+            var targetName = modeType === 'dist' ? targetValue.toFixed(0) + "m" : "0-" + targetValue + currentUnit.toLowerCase();
+            var record = { target: targetName, time: finalTime + "s", topSpeed: topSpeed.toFixed(1) + " " + currentUnit, timestamp: Date.now() };
+            var logs = JSON.parse(localStorage.getItem('racebox_logs') || '[]');
+            logs.unshift(record); if(logs.length > 10) logs.pop();
+            localStorage.setItem('racebox_logs', JSON.stringify(logs));
+            if (currentUser && !currentUser.isAnonymous) { db.ref('users/' + currentUser.uid + '/logs').push(record); }
+        }
+
+        function loadHistoryFromFirebase() {
+            if (!currentUser || currentUser.isAnonymous) return;
+            db.ref('users/' + currentUser.uid + '/logs').limitToLast(10).once('value', function(snapshot) {
+                var firebaseLogs = [];
+                snapshot.forEach(function(child) { firebaseLogs.unshift(child.val()); });
+                if(firebaseLogs.length > 0) { localStorage.setItem('racebox_logs', JSON.stringify(firebaseLogs)); renderHistory(); }
+            });
+        }
+
+        function renderHistory() {
+            var logs = JSON.parse(localStorage.getItem('racebox_logs') || '[]');
+            var tbody = document.getElementById('historyBody');
+            if(logs.length === 0) { tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:#555;">Belum ada catatan run</td></tr>'; return; }
+            var rowsHtml = '';
+            for(var i = 0; i < logs.length; i++) {
+                var l = logs[i];
+                rowsHtml += '<tr><td style="font-weight:bold; color:#00F2FE;">' + l.target + '</td><td style="font-weight:bold; color:#FFD000;">' + l.time + '</td><td style="color:#00FF87;">' + l.topSpeed + '</td></tr>';
+            }
+            tbody.innerHTML = rowsHtml;
+        }
+
+        function clearHistory() {
+            localStorage.removeItem('racebox_logs');
+            if (currentUser && !currentUser.isAnonymous) { db.ref('users/' + currentUser.uid + '/logs').remove(); }
+            renderHistory();
+        }
+
+        function saveCustomBg() {
+            var url = document.getElementById('bgUrlInput').value.trim(); if(!url) return;
+            document.getElementById('appShell').style.backgroundImage = "url('" + url + "')";
+            localStorage.setItem('racebox_custom_bg', url); showToast("WALLPAPER KUSTOM DIPASANG!");
+        }
+
+        function resetCustomBg() {
+            document.getElementById('appShell').style.backgroundImage = "none"; document.getElementById('bgUrlInput').value = "";
+            localStorage.removeItem('racebox_custom_bg'); showToast("WALLPAPER DIRESET!");
+        }
+
+        function toggleSoundSetting(val) { soundEnabled = val; localStorage.setItem('racebox_sound', val); }
+
+        function changeSpeedUnit(unit) {
+            currentUnit = unit; document.getElementById('unitLabel1').innerText = unit;
+            document.getElementById('offsetValText').innerText = (speedOffset >= 0 ? "+" : "") + speedOffset + " " + unit;
+            document.getElementById('topSpeedText').innerText = topSpeed.toFixed(1) + " " + unit;
+            localStorage.setItem('racebox_unit', unit); updateUI();
+        }
+
+        function resetAllData() {
+            if(confirm("Apakah kamu yakin ingin menghapus seluruh log local?")) { localStorage.clear(); location.reload(); }
+        }
+
+        (function loadSettings() {
+            renderPresetsGrid();
+            var savedBg = localStorage.getItem('racebox_custom_bg');
+            if(savedBg) { document.getElementById('appShell').style.backgroundImage = "url('" + savedBg + "')"; document.getElementById('bgUrlInput').value = savedBg; }
+            var savedSound = localStorage.getItem('racebox_sound');
+            if(savedSound !== null) { soundEnabled = (savedSound === 'true'); document.getElementById('soundToggle').checked = soundEnabled; }
+            var savedUnit = localStorage.getItem('racebox_unit');
+            if(savedUnit) { currentUnit = savedUnit; document.getElementById('unitSelect').value = savedUnit; document.getElementById('unitLabel1').innerText = savedUnit; }
+        })();
+
+        function calcDistance(lat1, lon1, lat2, lon2) {
+            if(lat1==null || lon1==null || lat2==null || lon2==null) return 0;
+            var p1 = lat1 * Math.PI/180, p2 = lat2 * Math.PI/180, dp = (lat2-lat1) * Math.PI/180, dl = (lon2-lon1) * Math.PI/180;
+            var a = Math.pow(Math.sin(dp/2), 2) + Math.cos(p1)*Math.cos(p2)*Math.pow(Math.sin(dl/2), 2);
+            return 6371e3 * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
+        }
+    </script>
+</body>
+</html>
