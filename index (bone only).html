@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#05070d">
+    <title>RaceBox Ambaturace Pro</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,500;0,600;0,700;1,700&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="splash">
+    <div class="auth-logo">
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#00F2FE" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 14l4-5"/><path d="M3.5 17a9 9 0 1 1 17 0"/><circle cx="12" cy="14" r="1.2" fill="#00F2FE"/></svg>
+    </div>
+    <div class="splash-text">MEMUAT RACEBOX...</div>
+</div>
+
+<div id="toastNotif" class="toast"><span id="toastIcon">✓</span> <span id="toastMsg">OK</span></div>
+
+<div id="sysModal" class="blur-overlay" style="z-index:100001;">
+    <div class="modal-box">
+        <div id="sysIcon" style="font-size:44px; margin-bottom:6px;"></div>
+        <div id="sysTitle" style="font-size:15px; font-weight:800; letter-spacing:.8px; color:#fff; margin-bottom:10px;"></div>
+        <div id="sysMsg" style="font-size:13px; color:var(--muted); line-height:1.65; margin-bottom:18px;"></div>
+        <div id="sysBtns" style="display:flex; gap:8px;"></div>
+    </div>
+</div>
+
+<div id="runDetail" class="rd-overlay">
+    <div class="rd-head"><button class="rd-back" onclick="closeRunDetail()">‹</button><div class="rd-title" id="rdTitle">DRAG SESSION OVERVIEW</div><div style="width:40px;"></div></div>
+    <div class="rd-body" id="rdBody"></div>
+</div>
+
+<div id="customDistanceModal" class="blur-overlay">
+    <div class="modal-box">
+        <h3 class="digital-font neon-cyan" style="font-size: 15px; margin-bottom: 4px;">CUSTOM DRAG TARGET</h3>
+        <p style="font-size: 12px; color: #8089a0; margin-bottom: 12px;">Masukkan jarak target balap (meter):</p>
+        <input type="number" inputmode="decimal" id="customMetersInput" class="setting-input digital-font" placeholder="Misal: 500" style="text-align: center; font-size: 18px;">
+        <div style="display: flex; gap: 8px; margin-top: 14px;">
+            <button class="setting-btn" style="flex: 1; background: var(--cyan); color: #000;" onclick="submitCustomDistance()">PASANG TARGET</button>
+            <button class="setting-btn" style="flex: 1; background: #1c2230; color: #fff;" onclick="closeCustomDistanceModal()">BATAL</button>
+        </div>
+    </div>
+</div>
+
+<div id="presetManagerModal" class="blur-overlay">
+    <div class="modal-box" style="max-width: 360px;">
+        <h3 class="digital-font neon-yellow" style="font-size: 15px; margin-bottom: 8px;">KELOLA PRESET BALAP</h3>
+        <div id="presetListContainer" style="max-height: 160px; overflow-y: auto; text-align: left; margin-bottom: 10px; border: 1px solid var(--line); padding: 6px; border-radius: 10px;"></div>
+        <div style="border-top: 1px solid var(--line); padding-top: 8px; text-align: left;">
+            <span class="setting-label">TAMBAH PRESET BARU</span>
+            <div style="display: flex; gap: 6px; margin-top: 4px;">
+                <input type="text" id="newPresetLabel" class="setting-input" placeholder="Label (ex: 500M)" style="flex: 1;">
+                <input type="number" inputmode="decimal" id="newPresetVal" class="setting-input" placeholder="Nilai" style="flex: 1;">
+            </div>
+            <select id="newPresetType" class="setting-input" style="margin-top: 6px;">
+                <option value="dist">Jarak (Meter)</option>
+                <option value="speed">Kecepatan (0-KM/H)</option>
+            </select>
+            <button class="setting-btn" style="width: 100%; background: var(--green); color: #000; margin-top: 8px;" onclick="addNewPreset()">+ SIMPAN PRESET BARU</button>
+        </div>
+        <button class="setting-btn" style="width: 100%; background: #1c2230; color: #fff; margin-top: 10px;" onclick="closePresetManagerModal()">TUTUP</button>
+    </div>
+</div>
+
+<!-- LOGIN -->
+<div class="modal-overlay" id="authModal">
+    <div class="auth-card">
+        <div class="auth-logo">
+            <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#00F2FE" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 14l4-5"/><path d="M3.5 17a9 9 0 1 1 17 0"/><circle cx="12" cy="14" r="1.2" fill="#00F2FE"/></svg>
+        </div>
+        <div class="auth-title">RACEBOX <span>PRO</span></div>
+        <div class="auth-sub">Drag timer &amp; GPS speedometer presisi</div>
+
+        <div class="field">
+            <span class="field-icon">✉️</span>
+            <input type="email" id="authEmail" class="setting-input" placeholder="Email akun" autocomplete="username" inputmode="email" autocapitalize="none">
+        </div>
+        <div class="field">
+            <span class="field-icon">🔒</span>
+            <input type="password" id="authPassword" class="setting-input" placeholder="Password" autocomplete="current-password">
+            <button type="button" class="eye" id="authEye" onclick="toggleAuthPass()" aria-label="Tampilkan password">👁</button>
+        </div>
+
+        <button class="btn-primary" id="loginBtn" onclick="loginUser()">MASUK</button>
+        <div class="auth-error" id="authError"></div>
+
+        <div class="auth-divider">BELUM PUNYA AKSES?</div>
+        <a class="btn-tiktok" href="https://www.tiktok.com/@wongpolosbiasa" target="_blank" rel="noopener noreferrer">
+            <span style="font-size:18px;">🎵</span>
+            <span>BELI AKSES DI TIKTOK<small>@wongpolosbiasa</small></span>
+        </a>
+
+        <button class="link-btn" id="guestBtn" onclick="loginGuest()">Coba dulu sebagai tamu (24 jam)</button>
+        <div class="auth-foot">1 akun = 1 perangkat aktif</div>
+    </div>
+</div>
+
+<div class="app-shell" id="appShell">
+  <div class="app-overlay-layer">
+
+    <div class="header">
+        <div class="brand">
+            <button class="menu-btn" onclick="toggleDrawer()" aria-label="Menu"><span></span><span></span><span></span></button>
+            <div class="brand-mark">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#00F2FE" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 14l4-5"/><path d="M3.5 17a9 9 0 1 1 17 0"/></svg>
+            </div>
+            <div class="brand-title">RACEBOX<span class="brand-chip">PRO</span></div>
+        </div>
+        <div class="user-badge-container" onclick="openProfileTab()">
+            <img id="userPpImg" class="user-pp-img" src="data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150'%3E%3Crect width='150' height='150' fill='%23000'/%3E%3Ctext x='75' y='75' fill='%2300F2FE' font-family='Arial' font-size='72' font-weight='bold' text-anchor='middle' dominant-baseline='central'%3ER%3C/text%3E%3C/svg%3E" alt="PP">
+            <span class="user-badge-text" id="userBadgeText">Racer</span>
+        </div>
+    </div>
+
+    <div class="status-strip">
+        <div class="ss-chip"><span id="ssBattIcon">🔋</span><b id="ssBattVal">--%</b></div>
+        <div class="ss-clock digital-font" id="ssClock">--:--:--</div>
+        <div class="ss-chip"><i id="ssGpsDot"></i><b id="ssGpsVal">GPS OFF</b></div>
+    </div>
+
+    <div class="content">
+
+        <!-- SPEEDO -->
+        <div id="tab-speed" class="tab-content active">
+            <div class="gauge-wrap">
+                <svg class="gauge-svg" viewBox="0 0 240 140">
+                    <defs>
+                        <linearGradient id="gaugeGrad" x1="0" y1="0" x2="1" y2="0">
+                            <stop offset="0" stop-color="#00F2FE"/><stop offset="0.6" stop-color="#00FF87"/><stop offset="1" stop-color="#FFD000"/>
+                        </linearGradient>
+                    </defs>
+                    <path class="gauge-track" d="M 24 124 A 96 96 0 0 1 216 124"/>
+                    <path class="gauge-arc" id="gaugeArc" d="M 24 124 A 96 96 0 0 1 216 124" stroke="url(#gaugeGrad)"/>
+                </svg>
+                <div class="gauge-center">
+                    <div class="speed-val neon-cyan digital-font" id="speedText">0</div>
+                    <div class="speed-unit" id="unitLabel1">KM/H</div>
+                </div>
+            </div>
+
+            <div class="card-box">
+                <div class="card-title">TOP SPEED</div>
+                <div class="neon-yellow digital-font" style="font-size: 28px; font-weight: 700; margin-top: 2px;" id="topSpeedText">0.0 KM/H</div>
+                <button onclick="resetTopSpeed()" style="margin-top:4px; background:none; border:none; color:var(--red); font-size:11px; font-weight:700; cursor:pointer; letter-spacing:1px;">[ RESET TOP SPEED ]</button>
+            </div>
+
+            <div class="card-box">
+                <div style="display:flex; justify-content:space-between; font-size:12px; color:var(--muted); font-weight:700; letter-spacing:1px;">
+                    <span>KALIBRASI OFFSET GPS</span>
+                    <span id="offsetValText" class="neon-cyan digital-font">+0 KM/H</span>
+                </div>
+                <input type="range" id="offsetSlider" min="-10" max="10" value="0" style="width:100%; margin-top:10px;" oninput="updateOffset(this.value)">
+            </div>
+
+            <div class="card-box">
+                <div style="display:flex; align-items:center; justify-content:center; gap:10px; margin-bottom:4px;"><div id="gpsBars" class="gps-bars"><i></i><i></i><i></i><i></i></div><div class="card-title" id="gpsStatus" style="margin:0;">SENSOR BELUM AKTIF</div></div><div id="gpsSub" class="gps-sub">Tekan tombol di bawah untuk mengaktifkan GPS</div>
+                <button id="sensorBtn" onclick="initSystem()" class="btn-primary" style="margin-top:0; font-size:12px; letter-spacing:1.2px;">AKTIFKAN GPS &amp; SENSOR</button>
+            </div>
+        </div>
+
+        <!-- DRAG -->
+        <div id="tab-drag" class="tab-content">
+            <div class="bike-row"><span style="font-size:20px;">🏍️</span><input id="bikeName" class="setting-input" list="bikeList" maxlength="40" placeholder="Nama motor (cth: Vario 160 Stage 1)" oninput="saveBikeName()"><datalist id="bikeList"></datalist></div>
+            <div class="presets-grid" id="presetsGridContainer"></div>
+
+            <div style="color: var(--muted); font-size: 12px; width:100%; text-align:left; font-weight: 700; margin-top:14px; letter-spacing:0.8px;">
+                TARGET: <span id="targetLabel" class="neon-yellow digital-font">201 METER</span>
+            </div>
+            <div style="color: var(--muted); font-size: 12px; width:100%; text-align:left; margin-top:3px; font-weight: 700; letter-spacing:0.8px;">
+                JARAK TEMPUH: <span id="distText" class="neon-cyan digital-font">0.0 / 201.0 m</span>
+            </div>
+            <div class="progress-container"><div class="progress-bar" id="progressBar"></div></div>
+
+            <div class="tree-container">
+                <div class="tree-light red" id="lightRed"></div>
+                <div class="tree-light yellow" id="lightYellow"></div>
+                <div class="tree-light green" id="lightGreen"></div>
+            </div>
+
+            <div class="timer-val digital-font" id="timerText">0.00</div>
+            <div style="color: var(--dim); font-size: 11px; letter-spacing: 3px; font-weight: 700; margin-top:2px;">DETIK</div>
+
+            <div id="statusAlert" class="status-alert">TEKAN READY UNTUK MULAI</div>
+
+            <div class="controls">
+                <div class="switch-container">
+                    <span>Auto-Start (Hentakan Gas)</span>
+                    <input type="checkbox" id="autoStartToggle" checked style="transform: scale(1.25);">
+                </div>
+                <button class="btn-main" id="mainBtn" onclick="handleMainButton()">READY / START</button>
+            </div>
+        </div>
+
+        <!-- LIVE -->
+        <div id="tab-live" class="tab-content">
+            <div class="card-box" style="margin-top: 0; text-align: left;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                    <span style="font-size:13px; font-weight:700; color:var(--cyan); letter-spacing:0.5px;">📡 HOST BROADCAST</span>
+                    <span class="live-badge off" id="hostBadge"><i></i><b id="hostBadgeText" style="font-weight:700;">OFFLINE</b></span>
+                </div>
+                <input type="text" id="hostSessionId" class="setting-input" placeholder="Session ID (contoh: room01)" maxlength="24" autocapitalize="none" style="margin-bottom:8px;">
+                <input type="password" id="hostPassword" class="setting-input" placeholder="Password room (opsional)" style="margin-bottom:10px;">
+                <div class="switch-container" style="margin-bottom:6px;"><span style="font-size:12px;">Bagikan lokasi di peta penonton</span><input type="checkbox" id="hostShareLoc" checked></div>
+                <button class="setting-btn" id="hostBtn" style="width:100%; background:var(--red); color:#fff; padding:13px;" onclick="toggleHostBroadcast()">MULAI HOST BROADCAST</button>
+                <div style="font-size:11px; color:var(--dim); margin-top:8px;">Hanya akun resmi yang bisa jadi host. Aktifkan GPS di tab SPEEDO dulu.</div>
+            </div>
+
+            <div class="card-box" style="text-align: left;">
+                <div style="font-size:13px; font-weight:700; color:var(--green); letter-spacing:0.5px; margin-bottom:10px;">👀 JOIN SPECTATOR</div>
+                <input type="text" id="joinSessionId" class="setting-input" placeholder="Session ID teman" maxlength="24" autocapitalize="none" style="margin-bottom:8px;">
+                <input type="password" id="joinPassword" class="setting-input" placeholder="Password room (jika ada)" style="margin-bottom:10px;">
+                <div style="display:flex; gap:8px;">
+                    <button class="setting-btn" id="joinBtn" style="flex:1; background:var(--cyan); color:#000; padding:13px; margin-top:0;" onclick="joinSpectatorRoom()">HUBUNGKAN</button>
+                    <button class="setting-btn" id="leaveBtn" style="flex:0 0 38%; background:#1c2230; color:#fff; padding:13px; margin-top:0; display:none;" onclick="leaveSpectatorRoom()">KELUAR</button>
+                </div>
+            </div>
+
+            <div id="spectatorDisplayBox" class="card-box" style="display:none; text-align:left; border-color: rgba(0,242,254,0.4);">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span style="font-size:13px; font-weight:700;" id="specName">Racer</span>
+                    <span class="live-badge off" id="specBadge"><i></i><b id="specState" style="font-weight:700;">MENUNGGU</b></span>
+                </div>
+                <div style="display:flex; align-items:flex-end; justify-content:space-between; margin-top:8px;">
+                    <div>
+                        <div class="digital-font neon-cyan" style="font-size:52px; font-weight:700; font-style:italic; line-height:1;" id="specSpeed">0</div>
+                        <div style="font-size:11px; letter-spacing:3px; color:var(--muted);" id="specUnit">KM/H</div>
+                    </div>
+                    <div style="text-align:right;">
+                        <div class="digital-font" style="font-size:34px; font-weight:700; font-style:italic; line-height:1;" id="specTimer">0.00</div>
+                        <div style="font-size:11px; letter-spacing:3px; color:var(--muted);">DETIK</div>
+                    </div>
+                </div>
+                <div class="progress-container" style="margin-top:12px;"><div class="progress-bar" id="specProgress"></div></div>
+                <div style="display:flex; justify-content:space-between; font-size:12px; color:var(--muted); margin-top:6px;">
+                    <span id="specTarget">TARGET: -</span><span id="specTop">TOP: 0</span>
+                </div>
+                <div id="specMap"></div>
+            </div>
+        </div>
+
+        <!-- MAPS -->
+        <div id="tab-map" class="tab-content" style="padding: 0;">
+            <div class="map-overlay">
+                <div style="font-size: 13px; font-weight: 700; color: #fff; letter-spacing:0.5px;">SETTING TRACK PETA</div>
+                <div style="font-size: 12px; color: var(--muted); margin-top: 3px;" id="mapHelpText">Klik 1x titik START, Klik 1x lagi titik FINISH</div>
+                <button onclick="resetCustomTrack()" style="margin-top:8px; padding:6px 14px; background:var(--red); color:#fff; border:none; border-radius:8px; font-size:11px; font-weight:700; cursor:pointer;">RESET TRACK PETA</button>
+            </div>
+            <div id="map"></div>
+        </div>
+
+        <!-- LOG -->
+        <div id="tab-history" class="tab-content">
+            <div style="width: 100%; display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <span style="font-weight: 700; color: #fff; font-size: 15px; letter-spacing:0.5px;">RIWAYAT RUN TERBAIK</span>
+                <button onclick="clearHistoryAsk()" style="background:var(--red); color:#fff; border:none; padding:6px 10px; border-radius:8px; font-size:11px; font-weight:700; cursor:pointer;">HAPUS LOG</button>
+            </div>
+            <div class="card-box" style="margin-top:4px; padding:6px 10px;">
+                <table class="history-table">
+                    <thead><tr><th>TARGET</th><th>WAKTU</th><th>TOP SPEED</th></tr></thead>
+                    <tbody id="historyBody"><tr><td colspan="3" style="text-align:center; color:#555;">Belum ada catatan run</td></tr></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- RANK -->
+        <div id="tab-rank" class="tab-content">
+            <div class="sec-title">🏆 LEADERBOARD</div>
+            <div class="lb-chips" id="lbChips"></div>
+            <div class="card-box" style="padding: 8px 10px; margin-top: 6px; width: 100%;"><div id="lbList"></div></div>
+            <div class="sec-note">Top 10 tercepat. Satu akun satu rekor terbaik per kategori. Hanya akun resmi, akurasi GPS ≤ 25 m, tanpa fake GPS, dan waktu yang wajar yang masuk.</div>
+        </div>
+
+        <!-- CHAT -->
+        <div id="tab-chat" class="tab-content">
+            <div class="sec-title">💬 CHAT GLOBAL</div>
+            <div class="chat-wrap">
+                <div class="chat-list" id="chatList"></div>
+                <div class="chat-input"><input id="chatInput" class="setting-input" maxlength="200" placeholder="Tulis pesan..." onkeydown="if (event.key === 'Enter') sendChat()"><button class="chat-send" onclick="sendChat()">KIRIM</button></div>
+            </div>
+        </div>
+
+        <!-- SOSMED -->
+        <div id="tab-social" class="tab-content">
+            <div class="sec-title">🌐 MEDIA SOSIAL</div>
+            <div id="socialList" style="width: 100%;"></div>
+            <div class="follow-note">🔥 <b>FOLLOW ADMIN</b> biar makin seru &amp; dapat info lebih lanjut soal update, event, dan balapan!</div>
+        </div>
+
+        <!-- SETTING -->
+        <div id="tab-settings" class="tab-content">
+            <div style="width:100%; font-weight:700; color:#fff; font-size:15px; margin-bottom:2px; text-align:left; letter-spacing:0.5px;">PROFIL &amp; PENGATURAN</div>
+
+            <div class="setting-group">
+                <span class="setting-label">MANAJEMEN PROFIL RACER</span>
+                <div style="display:flex; align-items:center; gap:12px; margin-bottom:10px;">
+                    <img id="profilePpPreview" src="data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150'%3E%3Crect width='150' height='150' fill='%23000'/%3E%3Ctext x='75' y='75' fill='%2300F2FE' font-family='Arial' font-size='72' font-weight='bold' text-anchor='middle' dominant-baseline='central'%3ER%3C/text%3E%3C/svg%3E" style="width:48px; height:48px; border-radius:50%; border:2px solid var(--cyan); object-fit:cover;">
+                    <input type="text" id="profileNameInput" class="setting-input" placeholder="Nama Racer / Nickname" maxlength="20" style="flex:1;">
+                </div>
+
+                <span class="setting-label">FOTO PROFIL (GALERI HP)</span>
+                <input type="file" id="ppFileInput" accept="image/*" class="setting-input" onchange="uploadPpFromGallery(this)">
+
+                <span class="setting-label" style="margin-top:10px;">ATAU LINK URL FOTO PROFIL</span>
+                <input type="text" id="profilePpInput" class="setting-input" placeholder="https://link-gambar.com/pp.png" style="margin-bottom:6px;">
+
+                <button class="setting-btn" onclick="saveProfileData()">SIMPAN PROFIL RACER</button>
+            </div>
+
+            <div class="setting-group">
+                <span class="setting-label">AKUN LOGIN</span>
+                <div style="margin-bottom:10px;"><span style="font-size:11px; color:var(--muted);">EMAIL AKUN</span><div id="accountEmailText" style="font-size:14px; font-weight:700; color:var(--cyan);">Belum Login</div></div>
+                <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                    <button class="setting-btn" id="resetPassBtn" style="background:#1c2230; color:#fff;" onclick="togglePwPanel()">🔑 CEK / INTIP PASSWORD</button>
+                    <button class="setting-btn" style="background:var(--red); color:#fff;" onclick="logoutAccount()">LOGOUT AKUN</button>
+                </div>
+                <div id="pwPanel" style="display:none; margin-top:14px; padding-top:12px; border-top:1px solid rgba(255,255,255,0.08);">
+                    <span class="setting-label">PASSWORD SAAT INI</span>
+                    <div class="pw-wrap"><input type="password" id="pwCheckInput" class="setting-input" placeholder="Ketik password akunmu" autocomplete="current-password"><button type="button" class="pw-eye" onclick="togglePwEye('pwCheckInput', this)">👁️</button></div>
+                    <button class="setting-btn" style="margin-top:0;" onclick="checkPassword()">VERIFIKASI PASSWORD</button>
+                    <div id="pwResult" style="font-size:12px; font-weight:700; margin:8px 0 0; min-height:16px;"></div>
+                    <span class="setting-label" style="margin-top:14px;">GANTI PASSWORD (OPSIONAL)</span>
+                    <div class="pw-wrap"><input type="password" id="pwNewInput" class="setting-input" placeholder="Password baru (min. 6 karakter)" autocomplete="new-password"><button type="button" class="pw-eye" onclick="togglePwEye('pwNewInput', this)">👁️</button></div>
+                    <button class="setting-btn" style="margin-top:0; background:#1c2230; color:#fff;" onclick="changePassword()">SIMPAN PASSWORD BARU</button>
+                    <div style="font-size:10.5px; color:var(--dim); margin-top:10px; line-height:1.5;">Demi keamanan, password asli tidak tersimpan di server sehingga tidak bisa dibaca. Ketik passwordmu lalu tekan 👁️ untuk mengecek tulisannya, dan VERIFIKASI untuk memastikan benar.</div>
+                </div>
+            </div>
+
+            <div class="setting-group">
+                <span class="setting-label">CUSTOM BACKGROUND</span>
+                <span class="setting-label" style="margin-top:2px; color:var(--dim);">AMBIL DARI GALERI HP</span>
+                <input type="file" id="bgFileInput" accept="image/*" class="setting-input" onchange="uploadBgFromGallery(this)">
+                <span class="setting-label" style="margin-top:10px; color:var(--dim);">ATAU PASTE URL GAMBAR</span>
+                <input type="text" id="bgUrlInput" class="setting-input" placeholder="https://link-gambar.com/bg.jpg" style="margin-bottom:6px;">
+                <div style="display:flex; gap:6px;">
+                    <button class="setting-btn" onclick="saveCustomBgUrl()">PASANG BG LINK</button>
+                    <button class="setting-btn" style="background:#1c2230; color:#fff;" onclick="resetCustomBg()">RESET BG</button>
+                </div>
+            </div>
+
+            <div class="setting-group">
+                <div class="switch-container">
+                    <span>EFEK SUARA BEEP (LIGHTS)</span>
+                    <input type="checkbox" id="soundToggle" checked onchange="toggleSoundSetting(this.checked)" style="transform: scale(1.25);">
+                </div>
+            </div>
+
+            <div class="setting-group">
+                <div class="switch-container">
+                    <span>LAYAR TETAP MENYALA</span>
+                    <input type="checkbox" id="awakeToggle" checked onchange="toggleKeepAwake(this.checked)" style="transform: scale(1.25);">
+                </div>
+            </div>
+
+            <div class="setting-group">
+                <span class="setting-label">SENSITIVITAS AUTO-START</span>
+                <select id="sensSelect" class="setting-input" onchange="changeAutoSens(this.value)">
+                    <option value="0">Santai (paling tahan guncangan)</option>
+                    <option value="1">Normal (disarankan)</option>
+                    <option value="2">Sensitif</option>
+                </select>
+            </div>
+
+            <div class="setting-group">
+                <span class="setting-label">SATUAN KECEPATAN</span>
+                <select id="unitSelect" class="setting-input" onchange="changeSpeedUnit(this.value)">
+                    <option value="KM/H">KM/H (Kilometer / Jam)</option>
+                    <option value="MPH">MPH (Miles / Hour)</option>
+                </select>
+            </div>
+
+            <div class="setting-group">
+                <button class="setting-btn" style="background:#1c2230; color:#fff; width:100%; margin-top:0;" onclick="clearHistoryAsk()">HAPUS SEMUA LOG RUN</button>
+            </div>
+
+            <div class="setting-group">
+                <span class="setting-label">INFO APLIKASI</span>
+                <div id="appInfo" style="font-size:12px; color:var(--muted); line-height:2;"></div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="wm">POWERED BY <b>AMBATURACE GANK</b></div>
+    <div class="drawer-backdrop" id="drawerBackdrop" onclick="closeDrawer()"></div>
+    <div class="bottom-nav" id="navDrawer">
+        <div class="drawer-head">MENU<small>RACEBOX PRO TELEMETRY</small></div>
+        <div class="nav-item active" data-tab="speed" onclick="switchTab('speed', this)"><span>⚡</span><span>SPEEDO</span></div>
+        <div class="nav-item" data-tab="drag" onclick="switchTab('drag', this)"><span>⏱️</span><span>DRAG</span></div>
+        <div class="nav-item" data-tab="live" onclick="switchTab('live', this)"><span>📡</span><span>LIVE</span></div>
+        <div class="nav-item" data-tab="map" onclick="switchTab('map', this)"><span>🗺️</span><span>MAPS</span></div>
+        <div class="nav-item" data-tab="history" onclick="switchTab('history', this)"><span>🏆</span><span>LOG</span></div>
+        <div class="nav-item" data-tab="rank" onclick="switchTab('rank', this)"><span>🥇</span><span>RANK</span></div>
+        <div class="nav-item" data-tab="chat" onclick="switchTab('chat', this)"><span>💬</span><span>CHAT</span></div>
+        <div class="nav-item" data-tab="social" onclick="switchTab('social', this)"><span>🌐</span><span>SOSMED</span></div>
+        <div class="nav-item" data-tab="settings" onclick="switchTab('settings', this)"><span>⚙️</span><span>SETTING</span></div>
+        <div class="drawer-foot">POWERED BY<b>AMBATURACE GANK</b></div>
+    </div>
+
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
