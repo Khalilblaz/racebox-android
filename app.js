@@ -1,14 +1,3 @@
-var firebaseConfig = {
-            apiKey: "AIzaSyDuQEgk_86c6plQB5BNCHdRGgzHrFxPu3A",
-            authDomain: "drag-timer-8333f.firebaseapp.com",
-            projectId: "drag-timer-8333f",
-            databaseURL: "https://drag-timer-8333f-default-rtdb.asia-southeast1.firebasedatabase.app",
-            storageBucket: "drag-timer-8333f.firebasestorage.app",
-            messagingSenderId: "203591345564",
-            appId: "1:203591345564:web:46dafcc1767a94d835d459",
-            measurementId: "G-8MZTMYNQBE"
-        };
-
         var serverOffset = 0;
         var FB_OK = (typeof firebase !== 'undefined');
         var auth = null, db = null;
