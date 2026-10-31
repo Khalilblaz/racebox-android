@@ -1,31 +1,90 @@
-# RaceBox Pro Android
-# 🏎️ RaceBox Pro – Precision Drag Timer & Live Telemetry
+<div align="center">
 
-> **Turn your smartphone into a professional-grade drag racing telemetry tool.**
+# 🏁 RaceBox PRO
 
-**RaceBox Pro** adalah aplikasi *telemetry* dan *drag timer* berbasis GPS presisi tinggi yang dibangun menggunakan **Capacitor** dan **Firebase**. Aplikasi ini dirancang khusus untuk para tuner, pembalap, dan antusias otomotif untuk mengukur performa akselerasi kendaraan secara *real-time* tanpa perlu membeli alat *hardware* mahal.
+**Speedometer • Drag Timer • Leaderboard • Chat Global**
 
----
+Aplikasi telemetri balap berbasis GPS untuk para racer jalanan.
+Ukur kecepatan, adu waktu drag, dan rebut posisi teratas di leaderboard.
 
-## 🚀 Fitur Utama
+*Powered by **Ambaturace Gank***
 
-- ⚡ **GPS Speedometer & Kalibrasi Offset** – Respons kecepatan presisi dengan *smoothing filter* dan kalibrasi kustom untuk penyesuaian ukuran ban.
-- ⏱️ **Drag Timer & Launch Control** – Dilengkapi animasi *Christmas Tree Lights*, *Auto-Start* via sensor guncangan (accelerometer), serta preset target:
-  - **Jarak:** `60 FT`, `201M`, `402M`, dan `Custom Meters`.
-  - **Akselerasi:** `0–60 KM/H` & `0–100 KM/H`.
-- 🔴 **Live Spectator Telemetry Stream** – Pantau pergerakan kecepatan, waktu, dan grafik *progress* jarak teman secara *real-time* saat mereka melaju di lintasan.
-- 🗺️ **Interactive Map Track Builder** – Pasang titik *Start* dan *Finish* buatan langsung di atas peta interaktif berbasis Leaflet JS.
-- 🔒 **Single Device Lock (1 Akun 1 HP)** – Proteksi keamanan sesi login via Firebase Realtime Database untuk mencegah penggunaan ganda.
-- 🏆 **Cloud Log History** – Sinkronisasi otomatis catatan *Top Speed* dan waktu *run* terbaik ke database cloud.
-- 🎨 **Stealth Neon Racing HUD** – Antarmuka modern bernuansa *neon racing*, Audio FX countdown, dan dukungan *custom background wallpaper*.
+</div>
 
 ---
 
-## 🛠️ Tech Stack & Prerequisites
+## ✨ Fitur
 
-- **Frontend:** HTML5, CSS3, JavaScript (ES6), Leaflet JS
-- **Backend Services:** Firebase (Authentication & Realtime Database)
-- **Mobile Hybrid Engine:** Ionic Capacitor (Android Native Wrapper)
-- **Development Tooling:** Android Studio / Gradle CLI
+### 🚀 Speedometer
+- Tampilan speedo digital dengan **top speed**
+- Satuan **KM/H** atau **MPH**
+- **Kalibrasi offset GPS** supaya angka sesuai speedometer kendaraan
+
+### 🏁 Drag Timer
+- Preset siap pakai: **201M, 402M, 60 FT, 0-60 KM/H, 0-100 KM/H**
+- **Custom target** jarak atau kecepatan, dan preset bisa ditambah atau dihapus sendiri
+- **Auto-start:** timer mulai otomatis saat motor melaju, dengan 3 level sensitivitas
+- Lampu start, progress jarak, dan **hasil split** per jarak atau kecepatan
+- Pencatatan **nama motor** di setiap run
+
+### 📊 Riwayat & Detail Run
+- Semua run tersimpan di **riwayat**
+- Tekan satu run untuk membuka **detail:** max speed, grafik kecepatan, dan waktu tiap split
+
+### 🏆 Leaderboard
+- **Top 10** tercepat di tiap kategori
+- Tampil nama racer, nama motor, waktu, dan kecepatan
+- Rekor baru langsung naik ke posisi atas secara realtime
+- Pengaman: deteksi **fake GPS**, batas waktu wajar, dan syarat akurasi GPS
+
+### 💬 Chat Global
+- Ngobrol realtime dengan sesama racer
+- Akun resmi bisa kirim pesan, tamu bisa membaca
+
+### 📡 Live & Peta
+- **Live spectator:** satu racer jadi *host* dan yang lain menonton lewat **Session ID** (bisa diberi password)
+- Peta untuk memantau posisi
+
+### 👤 Akun & Profil
+- Login email dan password, atau **akun tamu (24 jam)**
+- **1 akun = 1 perangkat** dengan notifikasi saat akun dipakai di perangkat lain
+- Profil racer: nama dan foto (galeri atau link)
+- **Cek / intip password** dan ganti password
+- **Custom background** dari galeri atau link gambar
+
+### ⚙️ Pengaturan
+- Satuan kecepatan, sensitivitas auto-start, dan layar tetap menyala
+- Info aplikasi: versi, ID perangkat, koneksi, status GPS
+- Hapus semua log run
+
+### 📱 Aplikasi Android
+- **GPS tetap jalan di background** dengan notifikasi aktif
+- Bar status: **jam digital, baterai, dan info GPS** (akurasi dan Hz)
+- Menu geser dari kiri
+- Menu Sosmed owner dan support
 
 ---
+
+## 🧰 Teknologi
+- **Frontend:** HTML, CSS, JavaScript
+- **Backend:** Firebase Authentication & Realtime Database
+- **Android:** Capacitor, plugin Geolocation, Background Geolocation, dan Local Notifications
+
+## ℹ️ Catatan
+- GPS bawaan HP bekerja di kisaran **1–5 Hz**. Hasil terbaik didapat di area terbuka dengan akurasi GPS kecil.
+- Hasil timer adalah estimasi dari GPS, bukan alat ukur resmi.
+
+## 🤝 Kontak & Support
+Follow admin biar makin seru dan dapat info lebih lanjut:
+
+- 📸 Instagram: [@khalilhmmmmyh](https://www.instagram.com/khalilhmmmmyh)
+- 🎵 TikTok: [@wongpolosbiasa](https://www.tiktok.com/@wongpolosbiasa)
+- 🎵 TikTok Support: [@ambaturace.gank](https://www.tiktok.com/@ambaturace.gank)
+
+---
+
+<div align="center">
+
+**Powered by Ambaturace Gank** 🏴
+
+</div>
